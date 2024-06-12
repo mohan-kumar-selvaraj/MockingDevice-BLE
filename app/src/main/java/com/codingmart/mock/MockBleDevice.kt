@@ -15,6 +15,9 @@ import android.content.Context
 import android.os.Handler
 import android.os.ParcelUuid
 import android.util.Log
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import kotlin.random.Random
 
 class MockBleDevice(private val context: Context) {
@@ -28,6 +31,9 @@ class MockBleDevice(private val context: Context) {
     private val handler = Handler()
     private var isSendingHeartRate = false
     private var send75 = true
+    private var startTime: Long = 0
+
+    var heartRateValues by mutableStateOf(listOf<Int>())
 
     @SuppressLint("MissingPermission")
     fun startAdvertising() {
@@ -106,27 +112,40 @@ class MockBleDevice(private val context: Context) {
     fun startHeartRateSimulation() {
         if (isSendingHeartRate) return
         isSendingHeartRate = true
+        startTime = System.currentTimeMillis()
         handler.post(heartRateRunnable)
     }
     private val heartRateRunnable = object : Runnable {
         override fun run() {
             if (!isSendingHeartRate) return
 
-            val heartRate = if (send75) 75 else 65 // generate a heart rate
-//            val heartRate = Random.nextInt(60, 100) // Generate a random heart rate value
-            sendHeartRate(heartRate)
-            send75 = !send75  // Toggle between 75 and 65
+            val elapsedTime = System.currentTimeMillis() - startTime
+//            if (elapsedTime >= 70000) { // 40 seconds
+//                stopHeartRateSimulation()
+//                return
+//            }
 
-            handler.postDelayed(this, 500) // Repeat every second for 40 seconds
+//            val heartRate = if (send75) 75 else 65 // generate a heart rate
+            //for random values
+            val heartRate = Random.nextInt(60, 100) // Generate a random heart rate value
+            heartRateValues = heartRateValues + heartRate // Update the state with new heart rate values
+            // for array of values
+//            val heartRate = ByteArray(5) { Random.nextInt(60, 100).toByte() } // Generate 5 random heart rate values
+//            heartRateValues = heartRate.map { it.toInt() }.toList() // Update the state with new heart rate values
+            sendHeartRate(heartRate)
+//            send75 = !send75  // Toggle between 75 and 65
+
+            handler.postDelayed(this, 1000) // Repeat every second for 40 seconds
         }
     }
 
     @SuppressLint("MissingPermission")
+//    private fun sendHeartRate(heartRate: ByteArray) {   // for array of values
     private fun sendHeartRate(heartRate: Int) {
         val characteristic = gattServer?.getService(MockBleService.SERVICE_UUID)
             ?.getCharacteristic(MockBleService.CHARACTERISTIC_UUID)
+//        characteristic?.value = heartRate  // for array of values
         characteristic?.value = byteArrayOf(0x01, heartRate.toByte())
-
         connectedDevice?.let {
             gattServer?.notifyCharacteristicChanged(it, characteristic, false)
         }

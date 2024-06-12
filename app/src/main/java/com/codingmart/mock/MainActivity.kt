@@ -49,6 +49,7 @@ fun HomeScreen (
     var text by remember {
         mutableStateOf("Click to Start heart beat")
     }
+    val heartRates by remember { mockBleDevice::heartRateValues }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -78,5 +79,10 @@ fun HomeScreen (
         }) {
             Text(text = text)
         }
+        Spacer(modifier = Modifier.padding(20.dp))
+        Text(
+            text = "Heart Rate Values: ${heartRates.joinToString(", ")}",
+            fontSize = 16.sp
+        )
     }
 }
